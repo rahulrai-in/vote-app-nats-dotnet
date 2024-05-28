@@ -13,7 +13,7 @@ var objectStoreContext = new NatsObjContext(jsContext);
 // Create an object store named votes
 var voteStore = await objectStoreContext.CreateObjectStoreAsync("votes");
 
-// Create 2 receivers for vote.save to demonstrate load balancing between multiple instances
+// Create two receivers for vote.save to demonstrate load balancing between multiple instances
 await using var voteSubscription1 = await connection.SubscribeCoreAsync<int>("vote.save", "group1");
 var voteResponder1 = VoteResponder(voteSubscription1, voteStore, 1);
 

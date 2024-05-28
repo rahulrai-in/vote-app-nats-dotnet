@@ -23,7 +23,7 @@ async ValueTask HandleMessage(NatsSvcMsg<object> msg)
     var candidateId = Convert.ToInt32(msg.Subject.Split('.')[^1]);
     Console.WriteLine($"Received vote for candidate: {candidateId}");
 
-    // Retrieve the candidate ids from the Candidate Service
+    // Retrieve the candidate IDs from the Candidate Service
     var candidateResponse = await connection.RequestAsync<object, string>("candidate.get", null);
     var receivedData = JsonSerializer.Deserialize<Dictionary<int, string>>(candidateResponse.Data ?? string.Empty);
     var candidates = receivedData?.Keys.ToList() ?? []
@@ -36,7 +36,7 @@ async ValueTask HandleMessage(NatsSvcMsg<object> msg)
     }
     else
     {
-        //Publish the vote to the Vote Processor Service
+        //Publish the vote to the Vote Processor service
         await connection.PublishAsync("vote.save", candidateId);
         await msg.ReplyAsync("Vote has been cast");
     }
