@@ -69,7 +69,7 @@ Task VoteResponder(INatsSub<int> subscription, INatsObjStore objectStore, int co
                 voteCount++;
                 await objectStore.PutAsync(candidateId.ToString(), BitConverter.GetBytes(voteCount));
             }
-            catch (NatsObjNotFoundException e)
+            catch (NatsObjNotFoundException)
             {
                 // If candidate record does not exist in the store, create it
                 await objectStore.PutAsync(candidateId.ToString(), BitConverter.GetBytes(1));

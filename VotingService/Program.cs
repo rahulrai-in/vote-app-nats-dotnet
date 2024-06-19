@@ -1,12 +1,17 @@
-﻿using System.Text.Json;
+﻿using Common;
 using NATS.Client.Core;
 using NATS.Client.Services;
 
-await using var connection = new NatsConnection();
+// Set the custom serializer registry as the default for the connection.
+var serializerRegistry = new NatsJsonContextSerializerRegistry(CandidateDataContext.Default);
+
+var natsConnectionOptions = NatsOpts.Default with { SerializerRegistry = serializerRegistry };
+
+await using var connection = new NatsConnection(natsConnectionOptions);
 
 // Register as service with NATS
 var svc = new NatsSvcContext(connection);
-var service = await svc.AddServiceAsync(new("vote", "1.0.0")
+await using var service = await svc.AddServiceAsync(new("vote", "1.0.0")
 {
     Description = "Casts vote for candidate",
 });
@@ -24,10 +29,8 @@ async ValueTask HandleMessage(NatsSvcMsg<object> msg)
     Console.WriteLine($"Received vote for candidate: {candidateId}");
 
     // Retrieve the candidate IDs from the Candidate Service
-    var candidateResponse = await connection.RequestAsync<object, string>("candidate.get", null);
-    var receivedData = JsonSerializer.Deserialize<Dictionary<int, string>>(candidateResponse.Data ?? string.Empty);
-    var candidates = receivedData?.Keys.ToList() ?? []
-    ;
+    var candidateResponse = await connection.RequestAsync<object, Dictionary<int, string>>("candidate.get", null);
+    var candidates = candidateResponse.Data?.Keys.ToList() ?? [];
 
     // Validate the candidate ID
     if (!candidates.Contains(candidateId))

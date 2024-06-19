@@ -1,9 +1,14 @@
-﻿using System.Text.Json;
+﻿using Common;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 
-await using var connection = new NatsConnection();
+// Set the custom serializer registry as the default for the connection.
+var serializerRegistry = new NatsJsonContextSerializerRegistry(CandidateDataContext.Default);
+
+var natsConnectionOptions = NatsOpts.Default with { SerializerRegistry = serializerRegistry };
+
+await using var connection = new NatsConnection(natsConnectionOptions);
 
 var jsContext = new NatsJSContext(connection);
 var kvContext = new NatsKVContext(jsContext);
@@ -16,11 +21,13 @@ await candidateStore.PutAsync("1", "Cat");
 await candidateStore.PutAsync("2", "Dog");
 await candidateStore.PutAsync("3", "Fish");
 
-// Receiver for candidates.get
-await using var candidateSubscription = await connection.SubscribeCoreAsync<string>("candidate.get");
-var candidateReader = candidateSubscription.Msgs;
-var candidateResponder = Task.Run(async () =>
+Console.WriteLine("Candidate Service is ready.");
+
+// Receiver for candidate.get
+await foreach (var message in connection.SubscribeAsync<string>("candidate.get"))
 {
+    Console.WriteLine("Received candidate fetch request");
+
     // Retrieve the candidates from the KV store
     var candidateList = new Dictionary<int, string>();
     await foreach (var key in candidateStore.GetKeysAsync())
@@ -28,16 +35,7 @@ var candidateResponder = Task.Run(async () =>
         candidateList.Add(Convert.ToInt32(key), (await candidateStore.GetEntryAsync<string>(key)).Value!);
     }
 
-    // Serialize the candidate list to JSON
-    var candidateListJson = JsonSerializer.Serialize(candidateList);
-
-    await foreach (var msg in candidateReader.ReadAllAsync())
-    {
-        Console.WriteLine("Received candidate fetch request");
-        await msg.ReplyAsync(candidateListJson);
-        Console.WriteLine("Request processed");
-    }
-});
-
-Console.WriteLine("Candidate Service is ready.");
-await candidateResponder;
+    // Send the candidate list as a response
+    await message.ReplyAsync(candidateList);
+    Console.WriteLine("Request processed");
+}
