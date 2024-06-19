@@ -14,18 +14,13 @@ var objectStoreContext = new NatsObjContext(jsContext);
 var voteStore = await objectStoreContext.CreateObjectStoreAsync("votes");
 
 // Create two receivers for vote.save to demonstrate load balancing between multiple instances
-await using var voteSubscription1 = await connection.SubscribeCoreAsync<int>("vote.save", "group1");
-var voteResponder1 = VoteResponder(voteSubscription1, voteStore, 1);
-
-await using var voteSubscription2 = await connection.SubscribeCoreAsync<int>("vote.save", "group1");
-var voteResponder2 = VoteResponder(voteSubscription2, voteStore, 2);
+var voteResponder1 = VoteResponder("vote.save", "group1", voteStore, 1);
+var voteResponder2 = VoteResponder("vote.save", "group1", voteStore, 2);
 
 // Receiver for vote.get
-await using var voteGetSubscription = await connection.SubscribeCoreAsync<string>("vote.get");
-var voteGetReader = voteGetSubscription.Msgs;
 var voteGetResponder = Task.Run(async () =>
 {
-    await foreach (var msg in voteGetReader.ReadAllAsync())
+    await foreach (var msg in connection.SubscribeAsync<string>("vote.get"))
     {
         Console.WriteLine("Received candidate fetch request");
         var candidateVotes = new Dictionary<string, int>();
@@ -48,12 +43,11 @@ Console.WriteLine("Vote Processor Service is ready.");
 await Task.WhenAll(voteResponder1, voteResponder2, voteGetResponder);
 return;
 
-Task VoteResponder(INatsSub<int> subscription, INatsObjStore objectStore, int consumerId)
+Task VoteResponder(string subject, string queue, INatsObjStore objectStore, int consumerId)
 {
-    var voteReader = subscription.Msgs;
     var task = Task.Run(async () =>
     {
-        await foreach (var msg in voteReader.ReadAllAsync())
+        await foreach (var msg in connection.SubscribeAsync<int>(subject, queue))
         {
             var candidateId = msg.Data;
             Console.WriteLine($"Processor {consumerId}: Storing vote for candidate: {candidateId}");
