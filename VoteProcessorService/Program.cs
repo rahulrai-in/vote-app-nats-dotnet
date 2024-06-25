@@ -1,4 +1,4 @@
-﻿using Common;
+﻿using NATS.Client.Serializers.Json;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.ObjectStore;
@@ -34,7 +34,7 @@ var voteGetResponder = Task.Run(async () =>
 
         // Serialize the candidate votes to JSON using NatsJsonContextSerializer
         await msg.ReplyAsync(candidateVotes,
-            serializer: new NatsJsonContextSerializer<Dictionary<string, int>>(CandidateDataContext.Default));
+            serializer: NatsJsonSerializer<Dictionary<string, int>>.Default);
         Console.WriteLine("Request processed");
     }
 });

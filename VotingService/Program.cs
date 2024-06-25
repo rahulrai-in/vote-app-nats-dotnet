@@ -1,9 +1,9 @@
-﻿using Common;
-using NATS.Client.Core;
+﻿using NATS.Client.Core;
+using NATS.Client.Serializers.Json;
 using NATS.Client.Services;
 
-// Set the custom serializer registry as the default for the connection.
-var serializerRegistry = new NatsJsonContextSerializerRegistry(CandidateDataContext.Default);
+// Set the ad-hoc JSON serializer registry as the default for the connection.
+var serializerRegistry = NatsJsonSerializerRegistry.Default;
 
 var natsConnectionOptions = NatsOpts.Default with { SerializerRegistry = serializerRegistry };
 
