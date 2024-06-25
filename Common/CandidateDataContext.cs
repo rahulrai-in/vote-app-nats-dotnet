@@ -2,5 +2,5 @@
 
 namespace Common;
 
-[JsonSerializable(typeof(Dictionary<int, string>))]
+[JsonSerializable(typeof(Dictionary<string, int>))]
 public partial class CandidateDataContext : JsonSerializerContext { }
